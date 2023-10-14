@@ -13,6 +13,9 @@ python-dotenv = "*"
 bcrypt = "*"
 requests = "*"
 pytest = "*"
+fake-useragent = "*"
+selenium = "*"
+pyquery = "*"
 
 [dev-packages]
 
