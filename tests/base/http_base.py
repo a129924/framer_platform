@@ -5,11 +5,11 @@ class HttpClient:
     def __init__(self):
         self.__session = requests.session()
 
-    def get(self, path, **kwargs):
-        return self.__request(path, "GET", **kwargs)
+    def get(self, url, **kwargs):
+        return self.__request(url, "GET", **kwargs)
 
-    def post(self, path, data=None, json=None, **kwargs):
-        return self.__request(path, "POST", data, json, **kwargs)
+    def post(self, url, data=None, json=None, **kwargs):
+        return self.__request(url, "POST", data, json, **kwargs)
 
     def __request(self, url, method, data=None, json=None, **kwargs):
         resp = None

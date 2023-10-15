@@ -1,187 +1,106 @@
-from typing import Literal, Self
-
-from selenium import webdriver
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
-from pyquery import PyQuery as pq
-
-
-def output_html_file(html_string: str) -> None:
-    with open(
-        "./framer_validate_crawler/framer_info.html", "w+", encoding="UTF-8"
-    ) as html:
-        html.writelines(html_string)
+from src.framer_validate_crawler import (
+    FramerValidateCrawler,
+    extract_string,
+    WebElement,
+    By,
+)
+from src.tools import get_html_element, extract_data_from_pq, pq
+from src.collections import unpack
+from src.transformer import FrmaerValidatRowTransFormer, FramerValidateInfo
 
 
-def extract_string(
-    string: str,
-    regex_string: str,
-) -> str:
-    from re import search
+def output_json_file(obj: list | dict, output_path: str, indent: int = 4) -> None:
+    from json import dumps
 
-    if match_string := search(regex_string, string):
-        return match_string.group(1)
-
-    return ""
+    with open(output_path, "w+", encoding="UTF-8") as json_file:
+        json_file.writelines(dumps(obj, ensure_ascii=False, indent=indent))
 
 
-class FramerValidateCrawler:
-    def __init__(self, brower: WebDriver = webdriver.Firefox()):
-        self.browser: WebDriver = brower
-        self._value: dict[str, WebElement] = {}
+def job(html_string: str, context: str) -> list[FramerValidateInfo]:
+    elements = get_html_element(html_string, context)
 
-    def get(self, url: str) -> Self:
-        self.browser.get(url)
-
-        return self
-
-    def wait_element_time(self, sec_time: int) -> Self:
-        self.browser.implicitly_wait(sec_time)
-
-        return self
-
-    def find_element(
-        self,
-        selector: str,
-        web_element: str,
-        action: Literal["click", "clear", "get_web_element"],
-        get_value_key: str | None = None,
-    ) -> Self:
-        match (action):
-            case "click":
-                print(web_element)
-                self.browser.find_element(selector, web_element).click()
-                return self
-
-            case "clear":
-                self.browser.find_element(selector, web_element).clear()
-                return self
-
-            case "get_web_element":
-                return self.get_web_element(
-                    get_value_key if get_value_key else selector,
-                    (self.browser.find_element(selector, web_element), self),
-                )
-
-            case _:
-                raise KeyError(f"the to_do key : '{action}' is not found!")
-
-    def get_web_element(
-        self, key: str, find_element_function: tuple[WebElement, Self]
-    ) -> Self:
-        self._value[key] = find_element_function[0]
-
-        return find_element_function[1]
-
-    def get_value(self, key: str | None = None) -> WebElement | dict[str, WebElement]:
-        if key is None:
-            return self._value
-        elif key not in self._value:
-            raise KeyError(f"The key '{key}' is not found")
-        else:
-            return self._value[key]
-
-
-if __name__ == "__main__":
-    url = (
-        "https://epv.afa.gov.tw/Home/FriendlyIndustryQuery?SearchByField=0&SearchByKeyWords=&CropCategory_Produce=13&SearchByCropCategoryIDs=&SearchByGroup=",
-    )
-    framer_validate_crawler = FramerValidateCrawler()
-    elements: dict[str, WebElement] = (
-        framer_validate_crawler.get(url[0])
-        .wait_element_time(2)
-        .find_element(By.ID, "navbarDropdown4", "click")
-        .find_element(
-            By.XPATH, "/html/body/header/div/nav/div/ul/li[9]/div/a[1]", "click"
-        )
-        .find_element(
-            By.XPATH, "/html/body/main/div[2]/div/div[3]/div/div/select[1]", "click"
-        )
-        .find_element(
-            By.XPATH,
-            "/html/body/main/div[2]/div/div[3]/div/div/select[1]/option[5]",
-            "click",
-        )
-        .wait_element_time(10)
-        .find_element(
-            By.XPATH,
-            "/html/body/main/div[2]/div/div[2]/div/div[201]",
-            "get_web_element",
-            "element",
-        )
-        .find_element(
-            By.XPATH,
-            "/html/body/main/div[2]/div/div[3]/div/div",
-            "get_web_element",
-            "max_page",
-        )
-        .find_element(
-            By.XPATH,
-            "/html/body/main/div[2]/div/div[2]/div",
-            "get_web_element",
-            "framer_info_rows",
-        )
-    ).get_value()  # type: ignore
-
-    print(elements)
-    max_page_element = elements["max_page"].text
-    framer_info_rows = elements["framer_info_rows"].get_attribute("outerHTML")
-    print(
-        max_page := int(
-            extract_string(string=max_page_element, regex_string=r"第 \d+/(\d+) 頁")
-        )
+    return extract_data_from_pq(
+        elements,
+        FrmaerValidatRowTransFormer,
+        lambda element: pq(element).text().split("\n"),  # type: ignore
     )
 
-    print(framer_info_rows)
 
-    all_framer_info_rows = [
-        {
-            index: (
-                framer_validate_crawler.wait_element_time(10)
-                .find_element(
-                    By.XPATH, "/html/body/main/div[2]/div/div[3]/div/div/a[2]", "click"
+url = (
+    "https://epv.afa.gov.tw/Home/FriendlyIndustryQuery?SearchByField=0&SearchByKeyWords=&CropCategory_Produce=13&SearchByCropCategoryIDs=&SearchByGroup=",
+)
+
+framer_validate_crawler = FramerValidateCrawler()
+elements: dict[str, WebElement] = (
+    framer_validate_crawler.get(url[0])
+    .implicitly_wait(20)
+    .find_element(By.ID, "navbarDropdown4", "click")  # 點選語系
+    .find_element(
+        By.XPATH, "/html/body/header/div/nav/div/ul/li[9]/div/a[1]", "click"
+    )  # 選擇語系
+    .find_element(
+        By.XPATH, "/html/body/main/div[2]/div/div[3]/div/div/select[1]", "click"
+    )  # 點每頁 {page} 筆
+    .find_element(
+        By.XPATH,
+        "/html/body/main/div[2]/div/div[3]/div/div/select[1]/option[5]",
+        "click",
+    )
+    .find_element(
+        By.XPATH,
+        "/html/body/main/div[2]/div/div[2]/div/div[201]",
+        "get_web_element",
+        "element",
+    )
+    .find_element(
+        By.XPATH,
+        "/html/body/main/div[2]/div/div[3]/div/div",
+        "get_web_element",
+        "max_page",
+    )
+    .find_element(
+        By.XPATH,
+        "/html/body/main/div[2]/div/div[2]/div",
+        "get_web_element",
+        "framer_info_rows",
+    )
+).get_value()  # type: ignore
+
+max_page_element = elements["max_page"].text
+framer_info_rows = elements["framer_info_rows"].get_attribute("outerHTML")
+
+max_page = int(extract_string(string=max_page_element, regex_string=r"第 \d+/(\d+) 頁"))
+
+next_page = "/html/body/main/div[2]/div/div[3]/div/div/a[2]"
+all_framer_info_rows = unpack(
+    [
+        job(
+            html_string=(
+                framer_validate_crawler.wait_element_time(
+                    sec_time=60,
+                    wait_element_info={
+                        "by": By.XPATH,
+                        "context": "/html/body/main/div[2]/div/div[3]/div/div",
+                        "pattern_string": f"第 {index}/22 頁，",
+                    },
                 )
-                .wait_element_time(10)
                 .find_element(
                     By.XPATH,
-                    "/html/body/main/div[2]/div/div[2]/div",
+                    "/html/body/main/div[2]/div/div[2]/div",  # 每一頁農夫驗證資訊
                     "get_web_element",
                     "framer_info_rows",
                 )
+                .find_element(By.XPATH, next_page, "click")
                 .get_value("framer_info_rows")
                 .get_attribute("outerHTML")  # type: ignore
-            )
-        }
-        for index in range(2, max_page + 2, 1)
+            ),
+            context=".row.list-body.LCGD2-data-row",
+        )
+        for index in range(1, max_page + 1, 1)
     ]
+)
 
-    print(len(all_framer_info_rows))
-    print(all_framer_info_rows[-1])
+framer_validate_crawler.browser.quit()
+print(len(all_framer_info_rows))  # 4345
 
-# browser.get(url[0])
-# evealed = browser.implicitly_wait(2)
-# browser.find_element(By.ID, "navbarDropdown4").click()
-# browser.find_element(
-#     By.XPATH, "/html/body/header/div/nav/div/ul/li[9]/div/a[1]"
-# ).click()
-# browser.find_element(
-#     By.XPATH, "/html/body/main/div[2]/div/div[3]/div/div/select[1]"
-# ).click()# V
-# browser.find_element(
-#     By.XPATH, "/html/body/main/div[2]/div/div[3]/div/div/select[1]/option[5]"
-# ).click()
-
-# browser.implicitly_wait(10)
-# element = browser.find_element(
-#     By.XPATH, "/html/body/main/div[2]/div/div[2]/div/div[201]"
-# )
-
-# print(element.text)
-
-# page = browser.find_element(By.XPATH, "/html/body/main/div[2]/div/div[3]/div/div").text
-
-
-# # print(browser.page_source)  # 獲得page的html
-
-# html_string = browser.page_source  # noqa: E999
+output_json_file(all_framer_info_rows, "./framer_validate_info.json")

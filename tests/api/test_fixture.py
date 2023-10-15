@@ -21,6 +21,5 @@ def login(request: FixtureRequest) -> UserInfo:
 
 
 @mark.parametrize("login", user_infos, indirect=True)
-def test_one_param(login):
-    # print(type(login))
+def test_one_param(login: UserInfo) -> None:
     assert login["user"] == "AAA" and login["password"] == 123
