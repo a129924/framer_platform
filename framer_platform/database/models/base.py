@@ -47,6 +47,12 @@ class BASE(Base):
         try:
             db_session.add(self)
             return await db_session.commit()
+        except IntegrityError as ex:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Data with the same unique constraint already exists",
+            ) from ex
+
         except SQLAlchemyError as ex:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=repr(ex)
