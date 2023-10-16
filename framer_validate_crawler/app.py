@@ -72,7 +72,7 @@ framer_info_rows = elements["framer_info_rows"].get_attribute("outerHTML")
 max_page = int(extract_string(string=max_page_element, regex_string=r"第 \d+/(\d+) 頁"))
 
 next_page = "/html/body/main/div[2]/div/div[3]/div/div/a[2]"
-all_framer_info_rows = unpack(
+all_framer_info_tables = unpack(
     [
         job(
             html_string=(
@@ -101,6 +101,6 @@ all_framer_info_rows = unpack(
 )
 
 framer_validate_crawler.browser.quit()
-print(len(all_framer_info_rows))  # 4345
+print(len(all_framer_info_tables))  # 4345
 
-output_json_file(all_framer_info_rows, "./framer_validate_info.json")
+output_json_file(all_framer_info_tables, "./framer_validate_info.json")

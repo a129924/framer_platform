@@ -3,7 +3,7 @@ from typing import Iterable, TypeVar
 T = TypeVar("T")
 
 
-def unpack(iterable: Iterable[list[T]]) -> list[T]:
+def unpack(iterable: Iterable[Iterable[T]]) -> list[T]:
     from itertools import chain
 
     return list(chain.from_iterable(iterable))
