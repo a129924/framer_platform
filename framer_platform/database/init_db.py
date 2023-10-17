@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from framer_platform.database import get_async_session
 from framer_platform.database.models.regester_model import User
 
@@ -51,7 +52,7 @@ data = [
 
 @init_db_router.on_event("startup")
 async def init_db() -> None:
-    # async for async_session in get_async_session():
-    #     for user_info in data:
-    #         await User(**user_info).save(db_session=async_session)
-    ...
+    async for async_session in get_async_session():
+        for user_info in data:
+            if not User().find(db_session=async_session, **user_info):
+                await User(**user_info).save(db_session=async_session)
