@@ -81,7 +81,7 @@ all_framer_info_tables = unpack(
                     wait_element_info={
                         "by": By.XPATH,
                         "context": "/html/body/main/div[2]/div/div[3]/div/div",
-                        "pattern_string": f"第 {index}/22 頁，",
+                        "pattern_string": f"第 {index}/{max_page} 頁，",
                     },
                 )
                 .find_element(
